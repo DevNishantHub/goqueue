@@ -35,7 +35,7 @@ func new(funcName string, args ...interface{}) *Task {
 	}
 }
 
-func Marshel(t *Task)(string, error){
+func Marshal(t *Task)(string, error){
 	b,err := json.Marshal(t)
 	if err != nil {
 		return "",fmt.Errorf("%w",err);

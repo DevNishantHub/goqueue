@@ -13,7 +13,7 @@ type broker struct{
 	queueName 	string
 }
 
-func new(queuename string, redisAddr string) *broker{
+func New(queuename string, redisAddr string) *broker{
 	return &broker{
 		client: redis.NewClient(&redis.Options{
 			Addr: redisAddr,
@@ -26,22 +26,26 @@ func new(queuename string, redisAddr string) *broker{
 }
 
 func(b *broker) Enqueue(t *task.Task) error{
-	json,err := task.Marshel(t)
+
+	json,err := task.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("%w",err)
 	}
+
 	pushResult,err := b.client.LPush(context.Background(),b.queueName,json).Result()
 	if err != nil{
 		return fmt.Errorf("%w",err)
 	}
-	println(pushResult)
+
+	fmt.Println(pushResult)
 	return nil
 }
+
 func(b *broker) Dequeue() (*task.Task,error) {
 	popResult,err := b.client.BRPop(context.Background(),30*time.Second,b.queueName).Result()
 	if err != nil {
 		if err == redis.Nil{
-			return nil , fmt.Errorf("Time Reached Out")
+			return nil , fmt.Errorf("Time Reached")
 		} else{
 			return nil,fmt.Errorf("%w",err)
 		}
@@ -52,6 +56,25 @@ func(b *broker) Dequeue() (*task.Task,error) {
 	}
 	return result,nil
 }
-
-
+func (b *broker) SetResult(taskId string,t *task.Task) (error) {
+	key := fmt.Sprintf("result:%s",taskId)
+	json,err := task.Marshal(t)
+	if err != nil {
+		return err
+	}
+	_,err = b.client.Set(context.Background(),key,json,time.Hour).Result()
+	return err
+}
+func (b *broker) GetResult(taskId string)(*task.Task,error){
+	key := fmt.Sprintf("result:%s",taskId)
+	value,err := b.client.Get(context.Background(),key).Result()
+	if err != nil {
+		return nil,fmt.Errorf("Key Not found")
+	}
+	json,err := task.Unmarshal(value)
+	if err != nil {
+		return nil,fmt.Errorf("error Unmarshaling the json")
+	}
+	return json,nil
+}
 
