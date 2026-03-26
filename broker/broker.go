@@ -32,12 +32,11 @@ func(b *Broker) Enqueue(t *task.Task) error{
 		return fmt.Errorf("%w",err)
 	}
 
-	pushResult,err := b.client.LPush(context.Background(),b.queueName,json).Result()
+	_,err = b.client.LPush(context.Background(),b.queueName,json).Result()
 	if err != nil{
 		return fmt.Errorf("%w",err)
 	}
 
-	fmt.Println(pushResult)
 	return nil
 }
 

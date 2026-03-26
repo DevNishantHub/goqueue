@@ -12,7 +12,7 @@ type Worker struct{
 	registry 	map[string]func(args []interface{})(interface{},error)
 }
 
-func new (b *broker.Broker) *Worker {
+func New (b *broker.Broker) *Worker {
 	return &Worker{
 		broker: b,
 		registry: make(map[string]func(args []interface{}) (interface{}, error)),
@@ -24,14 +24,16 @@ func (w *Worker) Register(name string,fn func(args []interface{})(interface{},er
 }
 
 func (w *Worker)Run() {
+	fmt.Println("worker started, listening for tasks...")
 	for{
 		t,err := w.broker.Dequeue()
 		if err != nil {
-			fmt.Println("Dequeue Error: %w",err)
+			fmt.Println("Dequeue Error: ",err)
 			continue
 		}
 		go func(t *task.Task) {
 			fn,ok := w.registry[t.FuncName]
+    		fmt.Printf("worker picked up task: %s | func: %s\n", t.Id, t.FuncName)
 			if !ok {
 				t.Status = task.StatusError
 				t.Error = fmt.Sprintf("no handler for: %s", t.FuncName)
@@ -45,9 +47,12 @@ func (w *Worker)Run() {
 				t.Error = err.Error()
 			} else {
 				t.Status = task.StatusSuccess
-				t.Error = result.(string)
+				t.Result = result
 			}
-			w.broker.SetResult(t.Id,t)
+			if err := w.broker.SetResult(t.Id,t); err != nil {
+				fmt.Printf("failed to set result: %v\n", err)
+			}
+			fmt.Printf("worker finished task: %s | result: %v\n", t.Id, t.Result)
 		}(t)
 	}
 }

@@ -25,7 +25,7 @@ type Task struct{
 	CreatedAt	time.Time		`json:"created_at"`
 }
 
-func new(funcName string, args ...interface{}) *Task {
+func New(funcName string, args ...interface{}) *Task {
 	return &Task{
 		Id: uuid.NewString(),
 		FuncName: funcName,
